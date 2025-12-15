@@ -1,53 +1,17 @@
+"""eeprom_24lc32.py: example usage of handler."""
+
+__author__ = "Lawrence Own"
+__email__ = "aureias@gmail.com"
+
 import logging
 # import smbus2 as smbus    #Do not use, no native support of 16-bit registers
-from periphery import I2C   #write_bytes direct - reference - #https://python-periphery.readthedocs.io/en/latest/i2c.html
 from periphery.i2c import I2CError
+from periphery import I2C   #write_bytes direct - reference - #https://python-periphery.readthedocs.io/en/latest/i2c.html
 import time
 
 #https://forums.raspberrypi.com/viewtopic.php?t=157872
 
 logger = logging.getLogger(__name__)
-
-class HandlerBus:
-    def __init__(self, index:int=1, init:bool=True):
-        """Take args, try to instantiate a bus"""
-        self.index:int = index
-        self.exists:bool = False
-        self.bus = self._create_bus(self.index)    #sets self.exists if instantiates
-        self.device_addresses:list = self.scan_i2c(self.bus)
-
-    def _create_bus(self, index:int=1) -> object:
-        """Creates instance of I2C peripheral bus"""
-        index = self.index if index == None else index  #default use instantiated variant
-        try:
-            bus = I2C(f"/dev/i2c-{index}")
-            self.index = index  #update to index usage
-            self.exists = True  #if it passes bus arg
-            self.bus = bus
-            logger.info(f'Bus created: setting self.index to {self.index}, self.exists to: {self.exists}, self.bus to {self.bus}')
-        except I2CError as e:
-            logger.exception(f'Check i2cbus enabled & index - Typically 1 on RPi, arg was {index}: {e} - {e.args}')
-            self.exists = False #re-set to default false until we instantiate
-        return bus
-
-    def scan_i2c(self, bus:object=None) -> list:
-        """Loops through 7-bit address on bus and returns found device addresses
-        Args: object - bus (smbus instance)
-        Return: list of device addresses"""
-        bus:object = self.bus if bus == None else bus  #default to use self.bus
-        device_addresses:list = list()
-        i2c_errors:list = list()
-        msgs = [I2C.Message([0x00]), I2C.Message([0x00], read=True)]
-        with bus as bus:
-            for address in range(0, 128):
-                try:
-                    bus.transfer(address, msgs)
-                    device_addresses.append(address)
-                except I2CError: #read_byte_data will fail if no address at that byte
-                    i2c_errors.append(address)
-        hex_addresses = [f'0x{n:02x}' for n in device_addresses]
-        logger.info(f'device_addresses: {hex_addresses}')
-        return device_addresses
 
 class EEPROM24LCxx:
     """
@@ -60,14 +24,14 @@ class EEPROM24LCxx:
     1st 4kB rated at 10 million, last 28kB rated at 100K
     """
     def __init__(self, i2c_bus:object, address:int=0x50, delay:float = 0.001, size:int=32768):
-        self.bus = I2C("/dev/i2c-1")
+        # self.bus = I2C("/dev/i2c-1")
+        self.bus = i2c_bus
         self.address:int = address  #0x50 - 0x57 expected
         self.delay:float = delay    #typical 4 byte translation is ~0.5 mS, theoretical 100kBits is 0.32 mS. To be safe probably do a 1 mS delay between r/w to account for dead time.
         self.size:int = size    #register size - depends on HW variant of 24LCxx (32kB, 64kB, etc. - 2**12, 2**13, etc.)
         self._max_reg:int = int(size / 8 - 1)    #32768 bits / 8 -> 4096 - 1 = 4095
         self.exists:bool = self._exists_on_bus(self.address)    #flag for whether device is found on the bus
         self.cmd_to_translation:dict = {
-
         }
 
     def _exists_on_bus(self, address:int, bus:object=None) -> bool:
@@ -97,8 +61,6 @@ class EEPROM24LCxx:
             raise ValueError(valid[1])
         reg:list = self._split_reg(register)    #[0x01, 0x00]
         msgs:list = [I2C.Message(reg), I2C.Message([0x00], read=True)]
-        logger.debug(f'got here in read: {msgs} - wanted reg is {reg}')
-#msgs = [I2C.Message([0x00, 0x00]), I2C.Message([0x00], read=True)]
         try:
           start_time = time.time()
           self.bus.transfer(0x50, msgs)    #periphery.i2c.I2CError: [Errno 121] I2C transfer: Remote I/O error
@@ -117,7 +79,7 @@ class EEPROM24LCxx:
             register: int representing desired address
             data: int (byte)
             address: i2c address (0 - 127)
-        Returns: tuple on format (<success>, <list of byte payload>)
+        Returns: tuple - (<success>, <list of byte payload>)
         """
         address = self.address if address == None else address
         valid = self._valid_reg_and_data(register, data)
@@ -144,6 +106,8 @@ class EEPROM24LCxx:
             data: byte of data to load (0-8)
             address: (0x50 - 0x57)
             delay: Time between the write and read transaction - for 4 bytes, measured time is ~0.5 mS... so to be safe... do ~1 mS
+        Returns:
+            bool indicating if all(write_success, read_success, and data == resp) == True
         """
         data_written = False
         address = self.address if address == None else address
@@ -156,6 +120,10 @@ class EEPROM24LCxx:
         else:
             logger.exception(f'Error - write_success: {write_success}, read_success: {read_success}, or data != resp {data} vs. {resp}')
         return data_written #bool
+
+    def write_bytes(self):
+        """placeholder. Write up to 8 bytes sequentially"""
+        return None
 
     def _split_reg(self, register:int) -> list:
         """Convenience - splits register value into separate lists"""
@@ -180,21 +148,34 @@ class EEPROM24LCxx:
         return (valid, msg)
 
     def write_page(self):
-        return
+        return None
     
 if __name__ == "__main__":
     FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s:%(funcName)s] %(message)s"
     logging.basicConfig(format=FORMAT, level=logging.DEBUG)
-    handler_bus = HandlerBus(index=1)
 
-    eeprom = EEPROM24LCxx(handler_bus.bus, address=0x50, delay = 0.002, size=32768)
+    import handler_i2c
+    handler_i2c = handler_i2c.HandlerI2C(index=1)   #wrapper for periphery I2C bus... just adds some niceties / checks
+    logger.info(f'Found device addresses: {handler_i2c.device_addresses}')
+    eeprom = EEPROM24LCxx(handler_i2c.bus, address=0x50, delay = 0.002, size=32768) #32 kbits, 4095 bytes memory for 24LC32 chip
+
+    # example of single writes / reads
     write_success, payload1 = eeprom.write_byte(register=0x02, data=0x04, address=0x50)
-    time.sleep(0.01)
+    time.sleep(0.002)   #required delay - timed transfer time is ~ 0.0005(s) per 4 byte transaction
     read_success, reg0x02_val = eeprom.read_byte(register=0x02, address=0x50)
     logger.info(f'payload1: {payload1}, reg0x02_val: {reg0x02_val}')
 
-    time.sleep(0.01)
+    # example of bundling write / read - to verify that what was written is read back
+    time.sleep(0.002)
     example2_reg, example2_data = 0x03, 0x0a
     data_written = eeprom.write_read_byte(register=example2_reg, data = example2_data, address=0x50)
     logger.info(f'write_read_byte example - confirmed data_written: {data_written}')
-    handler_bus.bus.close()  #close the bus
+    handler_i2c.bus.close()  #close the bus
+
+    """Further improvements
+    1. Add an internal timer into the class that checks against the last r/w. This can get away from the time.sleep we're manually inserting.
+    2. Add multi-byte writes. 24LC32 can handle page writes up to 8 pages w/ 8 bytes each (64 bytes total)
+    3. Add a config file possibly tied to this so we can track timers.
+    4. Create an abstract layer that assigns addresses to metadata, i.e. serial #, PCB ID, install location, deploy date, etc.
+    5. Make it scalable to HW variants - 32 kB, 64 kB, etc.
+    """
