@@ -35,7 +35,7 @@ class HandlerBus:
         bus:object = self.bus if bus == None else bus  #default to use self.bus
         device_addresses:list = list()
         i2c_errors:list = list()
-        msgs = [I2C.Message([0x00], I2C.Message([0x00], read=True))]
+        msgs = [I2C.Message([0x00]), I2C.Message([0x00], read=True)]
         with bus as bus:
             for address in range(0, 128):
                 try:
