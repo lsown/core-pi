@@ -24,7 +24,7 @@ class EEPROM24LCxx:
     1st 4kB rated at 10 million, last 28kB rated at 100K
     """
     def __init__(self, i2c_bus:object, address:int=0x50, delay:float = 0.001, size:int=32768):
-        # self.bus = I2C("/dev/i2c-1")
+        #self.bus = I2C("/dev/i2c-1")
         self.bus = i2c_bus
         self.address:int = address  #0x50 - 0x57 expected
         self.delay:float = delay    #typical 4 byte translation is ~0.5 mS, theoretical 100kBits is 0.32 mS. To be safe probably do a 1 mS delay between r/w to account for dead time.
@@ -70,7 +70,7 @@ class EEPROM24LCxx:
         except I2CError as e:  #periphery.i2c.I2CError: [Errno 121] I2C transfer: Remote I/O error
           logger.exception(f'{e} - {e.args} - if Errno 121 - possible bus was busy from prior request, add a delay in request')
         resp:int = msgs[1].data[0]
-        logger.debug(f"0x100: 0x{resp:02x}")
+        logger.debug(f"Register: 0x{register:04x}: 0x{resp:02x}")
         return (success, resp) #int (0-255)
 
     def write_byte(self, register:int, data:int, address:int = None) -> tuple:
@@ -157,7 +157,8 @@ if __name__ == "__main__":
     import handler_i2c
     handler_i2c = handler_i2c.HandlerI2C(index=1)   #wrapper for periphery I2C bus... just adds some niceties / checks
     logger.info(f'Found device addresses: {handler_i2c.device_addresses}')
-    eeprom = EEPROM24LCxx(handler_i2c.bus, address=0x50, delay = 0.002, size=32768) #32 kbits, 4095 bytes memory for 24LC32 chip
+    handler_i2c.bus.close()	#close the scanner before we create a new bus instance within the EEPROM
+    eeprom = EEPROM24LCxx(I2C("/dev/i2c-1"), address=0x50, delay = 0.002, size=32768) #32 kbits, 4095 bytes memory for 24LC32 chip
 
     # example of single writes / reads
     write_success, payload1 = eeprom.write_byte(register=0x02, data=0x04, address=0x50)
@@ -167,7 +168,7 @@ if __name__ == "__main__":
 
     # example of bundling write / read - to verify that what was written is read back
     time.sleep(0.002)
-    example2_reg, example2_data = 0x03, 0x0a
+    example2_reg, example2_data = 0xFF, 0x0a	#write to register 255 - 0x0a
     data_written = eeprom.write_read_byte(register=example2_reg, data = example2_data, address=0x50)
     logger.info(f'write_read_byte example - confirmed data_written: {data_written}')
     handler_i2c.bus.close()  #close the bus
