@@ -180,3 +180,28 @@ if __name__ == "__main__":
     4. Create an abstract layer that assigns addresses to metadata, i.e. serial #, PCB ID, install location, deploy date, etc.
     5. Make it scalable to HW variants - 32 kB, 64 kB, etc.
     """
+
+"""
+Example log results:
+
+[2025-12-14 21:09:46,957] [INFO] [handler_i2c:_create_bus] Bus created: setting self.index to 1, self.exists to: True, self.bus to I2C (device=/dev/i2c-1, fd=3)
+[2025-12-14 21:09:46,977] [INFO] [handler_i2c:scan_i2c] device_addresses: ['0x20', '0x50']
+[2025-12-14 21:09:46,977] [INFO] [__main__:<module>] Found device addresses: [32, 80]
+[2025-12-14 21:09:46,977] [DEBUG] [__main__:_split_reg] byte 1: 0, byte 2: 0
+[2025-12-14 21:09:46,978] [DEBUG] [__main__:read_byte] self.bus.transfer time was 0.0005862712860107422s
+[2025-12-14 21:09:46,978] [DEBUG] [__main__:read_byte] Register: 0x0000: 0x03
+[2025-12-14 21:09:46,978] [DEBUG] [__main__:_split_reg] byte 1: 0, byte 2: 2
+[2025-12-14 21:09:46,978] [DEBUG] [__main__:write_byte] reg: [0, 2], data: 4, payload is: [0, 2, 4]
+[2025-12-14 21:09:46,978] [DEBUG] [__main__:write_byte] self.bus.transfer time was 0.00047588348388671875s
+[2025-12-14 21:09:46,980] [DEBUG] [__main__:_split_reg] byte 1: 0, byte 2: 2
+[2025-12-14 21:09:46,981] [DEBUG] [__main__:read_byte] self.bus.transfer time was 0.000545501708984375s
+[2025-12-14 21:09:46,981] [DEBUG] [__main__:read_byte] Register: 0x0002: 0x04
+[2025-12-14 21:09:46,981] [INFO] [__main__:<module>] payload1: [0, 2, 4], reg0x02_val: 4
+[2025-12-14 21:09:46,983] [DEBUG] [__main__:_split_reg] byte 1: 0, byte 2: 255
+[2025-12-14 21:09:46,983] [DEBUG] [__main__:write_byte] reg: [0, 255], data: 10, payload is: [0, 255, 10]
+[2025-12-14 21:09:46,984] [DEBUG] [__main__:write_byte] self.bus.transfer time was 0.00043654441833496094s
+[2025-12-14 21:09:46,986] [DEBUG] [__main__:_split_reg] byte 1: 0, byte 2: 255
+[2025-12-14 21:09:46,986] [DEBUG] [__main__:read_byte] self.bus.transfer time was 0.0005633831024169922s
+[2025-12-14 21:09:46,986] [DEBUG] [__main__:read_byte] Register: 0x00ff: 0x0a
+[2025-12-14 21:09:46,987] [INFO] [__main__:<module>] write_read_byte example - confirmed data_written: True
+"""
